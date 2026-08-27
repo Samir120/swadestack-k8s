@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gitops-test
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: gitops-test
+
+  template:
+    metadata:
+      labels:
+        app: gitops-test
+
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:alpine
+
+          ports:
+            - containerPort: 80
+
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+
+            limits:
+              cpu: 100m
+              memory: 64Mi
