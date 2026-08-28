@@ -1,0 +1,30 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: backend-migrate
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/sync-wave: "-1"
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+
+spec:
+  backoffLimit: 3
+
+  template:
+    spec:
+      restartPolicy: Never
+
+      containers:
+        - name: migrate
+          image: ghcr.io/samir120/swadestack-backend:50c771fa583a6ac26fd00f7fbad96cc9555e14a0
+
+          command:
+            - npm
+            - run
+            - db:migrate:production
+
+          envFrom:
+            - secretRef:
+                name: swadestack-secrets
+            - configMapRef:
+                name: swadestack-config

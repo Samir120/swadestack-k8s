@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: backend
+
+  template:
+    metadata:
+      labels:
+        app: backend
+
+    spec:
+      containers:
+        - name: backend
+          image: ghcr.io/samir120/swadestack-backend:50c771fa583a6ac26fd00f7fbad96cc9555e14a0
+
+          ports:
+            - containerPort: 5000
+              name: http
+
+          envFrom:
+            - secretRef:
+                name: swadestack-secrets
+            - configMapRef:
+                name: swadestack-config
+
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
+
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: swadestack-uploads
