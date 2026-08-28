@@ -28,5 +28,5 @@ ingressRoute:
   dashboard:
     enabled: false
 
-logs:
+log:
   level: INFO
