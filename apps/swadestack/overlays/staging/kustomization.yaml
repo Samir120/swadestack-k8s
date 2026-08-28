@@ -8,3 +8,4 @@ resources:
   - namespace.yaml
   - configmap.yaml
   - sealed-secret.yaml
+  - ingress.yaml
