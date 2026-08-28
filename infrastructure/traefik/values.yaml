@@ -1,0 +1,32 @@
+deployment:
+  replicas: 1
+
+service:
+  type: ClusterIP
+
+ports:
+  web:
+    port: 8000
+    exposedPort: 80
+    expose:
+      default: true
+
+  websecure:
+    port: 8443
+    exposedPort: 443
+    expose:
+      default: true
+
+providers:
+  kubernetesIngress:
+    enabled: true
+
+  kubernetesCRD:
+    enabled: true
+
+ingressRoute:
+  dashboard:
+    enabled: false
+
+logs:
+  level: INFO
