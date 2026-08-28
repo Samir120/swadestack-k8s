@@ -2,7 +2,8 @@ deployment:
   replicas: 1
 
 service:
-  type: ClusterIP
+  spec:
+    type: ClusterIP
 
 ports:
   web:
