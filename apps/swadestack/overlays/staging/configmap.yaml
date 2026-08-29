@@ -4,7 +4,6 @@ metadata:
   name: swadestack-config
   annotations:
     argocd.argoproj.io/sync-wave: "-2"
-
 data:
   NODE_ENV: production
   PORT: "5000"
@@ -12,8 +11,7 @@ data:
   DB_HOST: postgres
   DB_PORT: "5432"
 
-  FRONTEND_URL: https://lab.swadestack.com
-  CORS_ORIGIN: https://lab.swadestack.com
+  JWT_EXPIRES_IN: "15m"
 
   KLARNA_API_URL: https://api.playground.kustom.co
   KLARNA_TERMS_URL: https://lab.swadestack.com/terms
@@ -21,8 +19,14 @@ data:
   KLARNA_CONFIRMATION_URL: https://lab.swadestack.com/order-confirmation/{checkout.order.id}
   KLARNA_PUSH_URL: https://lab.swadestack.com/api/orders/klarna/push
 
-  SMTP_HOST: smtp.gmail.com
+  SMTP_HOST: smtp-relay.brevo.com
   SMTP_PORT: "587"
   SMTP_SECURE: "false"
 
-  APP_NAME: Swadestack
+  EMAIL_FROM_NAME: "Swade Stack"
+  EMAIL_FROM_ADDRESS: info@swadestack.com
+
+  FRONTEND_URL: https://lab.swadestack.com
+  CORS_ORIGIN: https://lab.swadestack.com
+
+  APP_NAME: SwadeStack
