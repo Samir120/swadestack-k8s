@@ -1,0 +1,61 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: uploads-backup
+  namespace: swadestack-production
+spec:
+  schedule: "15 2 * * *"
+  timeZone: Europe/Stockholm
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: Never
+
+          containers:
+            - name: uploads-backup
+              image: alpine:3.22
+
+              command:
+                - /bin/sh
+                - -ec
+                - |
+                  mkdir -p /backups/uploads
+
+                  FILE="/backups/uploads/uploads-$(date '+%Y-%m-%d_%H-%M-%S').tar.gz"
+
+                  echo "Creating uploads backup: ${FILE}"
+
+                  tar -czf "${FILE}" -C /uploads .
+
+                  tar -tzf "${FILE}" >/dev/null
+
+                  echo "Backup verified successfully."
+
+                  find /backups/uploads \
+                    -type f \
+                    -name '*.tar.gz' \
+                    -mtime +14 \
+                    -delete
+
+              volumeMounts:
+                - name: uploads
+                  mountPath: /uploads
+                  readOnly: true
+
+                - name: backups
+                  mountPath: /backups
+
+          volumes:
+            - name: uploads
+              persistentVolumeClaim:
+                claimName: swadestack-uploads
+
+            - name: backups
+              persistentVolumeClaim:
+                claimName: swadestack-backups

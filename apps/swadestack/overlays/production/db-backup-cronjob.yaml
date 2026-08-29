@@ -1,0 +1,66 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: swadestack-production
+spec:
+  schedule: "0 2 * * *"
+  timeZone: Europe/Stockholm
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: Never
+
+          containers:
+            - name: postgres-backup
+              image: postgres:16-alpine
+
+              command:
+                - /bin/sh
+                - -ec
+                - |
+                  mkdir -p /backups/database
+
+                  FILE="/backups/database/swadestack-$(date '+%Y-%m-%d_%H-%M-%S').dump"
+
+                  echo "Creating PostgreSQL backup: ${FILE}"
+
+                  PGPASSWORD="${DB_PASSWORD}" \
+                  pg_dump \
+                    -Fc \
+                    -h "${DB_HOST}" \
+                    -p "${DB_PORT}" \
+                    -U "${DB_USER}" \
+                    -d "${DB_NAME}" \
+                    -f "${FILE}"
+
+                  pg_restore -l "${FILE}" >/dev/null
+
+                  echo "Backup verified successfully."
+
+                  find /backups/database \
+                    -type f \
+                    -name '*.dump' \
+                    -mtime +14 \
+                    -delete
+
+              envFrom:
+                - configMapRef:
+                    name: swadestack-config
+                - secretRef:
+                    name: swadestack-secrets
+
+              volumeMounts:
+                - name: backups
+                  mountPath: /backups
+
+          volumes:
+            - name: backups
+              persistentVolumeClaim:
+                claimName: swadestack-backups

@@ -9,6 +9,9 @@ resources:
   - configmap.yaml
   - sealed-secret.yaml
   - ingress.yaml
+  - backup-pvc.yaml
+  - db-backup-cronjob.yaml
+  - uploads-backup-cronjob.yaml
 
 images:
   - name: ghcr.io/samir120/swadestack-backend
