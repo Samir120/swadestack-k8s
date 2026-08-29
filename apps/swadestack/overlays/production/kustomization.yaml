@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: swadestack-production
+
+resources:
+  - ../../base
+  - namespace.yaml
+  - configmap.yaml
+  - sealed-secret.yaml
+  - ingress.yaml
+
+images:
+  - name: ghcr.io/samir120/swadestack-backend
+    newTag: aca3ba7ff15ebf7cd263a6f64a114f38fd43a6ef
+
+  - name: ghcr.io/samir120/swadestack-frontend
+    newTag: aca3ba7ff15ebf7cd263a6f64a114f38fd43a6ef
