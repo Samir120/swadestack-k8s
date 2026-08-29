@@ -3,12 +3,6 @@ kind: Kustomization
 
 namespace: swadestack-production
 
-replicas:
-  - name: backend
-    count: 0
-  - name: frontend
-    count: 0
-
 resources:
   - ../../base
   - namespace.yaml
