@@ -17,7 +17,11 @@ spec:
     spec:
       containers:
         - name: backend
+<<<<<<< HEAD
           image: ghcr.io/samir120/swadestack-backend:7dc9fc4315d8e83a74db22d77bec9f84dcccb3d7
+=======
+          image: ghcr.io/samir120/swadestack-backend
+>>>>>>> 5f1dfc2 (Move staging image tags to overlay)
 
           ports:
             - containerPort: 5000
