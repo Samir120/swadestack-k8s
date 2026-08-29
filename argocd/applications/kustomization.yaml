@@ -7,3 +7,4 @@ resources:
   - reloader.yaml
   - traefik.yaml
   - cloudflared.yaml
+  - argocd-config.yaml
