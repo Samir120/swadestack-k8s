@@ -8,3 +8,4 @@ resources:
   - traefik.yaml
   - cloudflared.yaml
   - argocd-config.yaml
+  - sealed-secrets.yaml
