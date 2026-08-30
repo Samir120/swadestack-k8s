@@ -6,4 +6,3 @@ resources:
   - swadestack-alerts.yaml
   - alertmanagerconfig.yaml
   - alertmanager-smtp-sealedsecret.yaml
-  - test-alert.yaml
