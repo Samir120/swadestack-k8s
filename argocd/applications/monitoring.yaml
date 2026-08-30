@@ -16,6 +16,14 @@ spec:
         grafana:
           enabled: true
 
+          ingress:
+            enabled: true
+            ingressClassName: traefik
+            hosts:
+              - grafana.swadestack.com
+            path: /
+            pathType: Prefix
+
           persistence:
             enabled: true
             storageClassName: local-path
