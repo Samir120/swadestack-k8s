@@ -29,6 +29,9 @@ The deployment flow is:
       +--> Cloudflared
       +--> Reloader
       +--> Sealed Secrets
+      +--> kube-prometheus-stack
+      +--> Blackbox Exporter
+      +--> monitoring configuration
       +--> SwadeStack staging
       +--> SwadeStack production
 
@@ -40,6 +43,9 @@ The root Argo CD Application manages:
     ├── reloader
     ├── sealed-secrets
     ├── traefik
+    ├── monitoring
+    ├── monitoring-config
+    ├── blackbox-exporter
     ├── swadestack-staging
     └── swadestack-production
 
@@ -161,7 +167,10 @@ List all Argo Applications:
 Expected Applications:
 
     argocd-config
+    blackbox-exporter
     cloudflared
+    monitoring
+    monitoring-config
     reloader
     root
     sealed-secrets
@@ -649,6 +658,16 @@ Sealed Secrets:
 
     kubectl -n kube-system get deployment sealed-secrets-controller
 
+Monitoring:
+
+    kubectl -n argocd get application monitoring monitoring-config blackbox-exporter
+    kubectl get pods -n monitoring
+
+Prometheus custom SwadeStack rules:
+
+    curl -s http://127.0.0.1:9090/api/v1/rules \
+      | jq -r '.data.groups[] | select(.name | startswith("swadestack.")) | [.name, (.rules | length)] | @tsv'
+
 Public health:
 
     curl https://lab.swadestack.com/api/health
@@ -677,6 +696,10 @@ Render Argo bootstrap:
 Render Sealed Secrets:
 
     kubectl kustomize infrastructure/sealed-secrets >/dev/null
+
+Render monitoring configuration:
+
+    kubectl kustomize infrastructure/monitoring >/dev/null
 
 A successful command should exit with status 0.
 
@@ -728,6 +751,9 @@ Use this order for a complete rebuild:
     Verify Reloader
             |
             v
+    Verify monitoring / blackbox exporter / Alertmanager
+            |
+            v
     Restore PostgreSQL data
             |
             v
@@ -757,6 +783,10 @@ Run:
 
     kubectl -n kube-system get deployment sealed-secrets-controller
 
+    kubectl -n argocd get application monitoring monitoring-config blackbox-exporter
+
+    kubectl get pods -n monitoring
+
     kubectl get pods -n swadestack-staging
 
     kubectl get pods -n swadestack-production
@@ -770,6 +800,8 @@ The recovery is complete when:
 - the Kubernetes node is Ready
 - all Argo Applications are Synced and Healthy
 - infrastructure pods are Running
+- monitoring, monitoring-config, and blackbox-exporter are Synced and Healthy
+- Prometheus is scraping SwadeStack HTTP and PostgreSQL targets
 - staging workloads are Running
 - production workloads are Running
 - both public health endpoints succeed
@@ -843,6 +875,11 @@ Requested size:
 
 Do not treat the backup PVC as an off-machine backup. It is stored on the
 same Kubernetes host as the application data.
+
+The current off-machine copy is the PC-side rsync backup described below.
+An additional encrypted remote/off-site repository (for example restic to a
+remote provider) is not currently part of the implemented baseline and can be
+added later if the recovery requirements change.
 
 ---
 
@@ -1726,6 +1763,9 @@ For a complete host loss, use this order:
     Verify Traefik / Cloudflared / Reloader
             |
             v
+    Verify monitoring / blackbox exporter / Alertmanager
+            |
+            v
     Wait for production PostgreSQL and uploads PVCs
             |
             v
@@ -1815,10 +1855,379 @@ following are true:
 - backup export and off-machine pull timers are enabled
 - freshness timers are enabled
 - backup failures produce email alerts
+- Prometheus/Grafana/Alertmanager are operational
+- SwadeStack-specific Prometheus alerts are loaded and currently healthy
 - public staging and production health checks succeed
 - important production records and uploaded files have been verified
+- the production rollback procedure has been tested through GitOps
+- CI GitOps writers use serialized concurrency and conflict-aware rebase/push logic
 
 The backup design should be reviewed whenever storage, database topology,
 hosting hardware, SSH access, Cloudflare configuration, or secret-management
 strategy changes.
+
+---
+
+## 39. Repository responsibility boundaries
+
+SwadeStack uses two separate repositories.
+
+Application repository:
+
+    https://github.com/Samir120/swadestack
+
+It contains:
+
+    backend/
+    frontend/
+    .github/workflows/
+
+The application repository owns application source code, quality checks,
+container builds, GHCR publishing, staging deployment automation, and manual
+production promotion.
+
+GitOps repository:
+
+    https://github.com/Samir120/swadestack-k8s
+
+It contains only Kubernetes/GitOps configuration:
+
+    apps/
+    argocd/
+    infrastructure/
+    BOOTSTRAP.md
+    README.md
+
+Application `backend/` and `frontend/` source trees must not be committed to
+`swadestack-k8s`.
+
+The GitOps repository is the source of truth for desired cluster state.
+Direct `kubectl` mutations should not be used for normal application
+deployment changes because Argo CD will reconcile the cluster back to Git.
+
+---
+
+## 40. Monitoring and alerting
+
+Monitoring is managed by Argo CD.
+
+Main Applications:
+
+    monitoring
+    monitoring-config
+    blackbox-exporter
+
+`monitoring` deploys kube-prometheus-stack, including Prometheus, Grafana,
+Alertmanager, kube-state-metrics, and node-exporter.
+
+The kube-prometheus-stack Helm chart is pinned to:
+
+    88.6.1
+
+Prometheus persistent storage:
+
+    20Gi local-path
+    retention: 10d
+
+Grafana persistent storage:
+
+    5Gi local-path
+
+Alertmanager persistent storage:
+
+    2Gi local-path
+
+Verify:
+
+    kubectl -n argocd get application \
+      monitoring monitoring-config blackbox-exporter
+
+Expected:
+
+    Synced   Healthy
+
+Verify monitoring pods:
+
+    kubectl get pods -n monitoring
+
+### Public application probes
+
+Blackbox Exporter probes:
+
+    https://swadestack.com
+    https://lab.swadestack.com
+
+Verify probe health from Prometheus:
+
+    curl -sG \
+      --data-urlencode 'query=probe_success{job=~"swadestack-(production|staging)"}' \
+      http://127.0.0.1:9090/api/v1/query \
+      | jq -r '.data.result[] | [.metric.job, .value[1]] | @tsv'
+
+Expected values:
+
+    1
+
+### PostgreSQL exporter
+
+Each SwadeStack environment has a `postgres-exporter` workload.
+
+Verify:
+
+    curl -sG \
+      --data-urlencode 'query=pg_up{namespace=~"swadestack-(production|staging)"}' \
+      http://127.0.0.1:9090/api/v1/query \
+      | jq -r '.data.result[] | [.metric.namespace, .value[1]] | @tsv'
+
+Expected:
+
+    swadestack-production    1
+    swadestack-staging       1
+
+### SwadeStack Prometheus alerts
+
+Custom rule groups include:
+
+    swadestack.availability
+    swadestack.postgres
+    swadestack.tls
+    swadestack.storage
+    swadestack.backups
+
+They cover:
+
+- production HTTP availability
+- staging HTTP availability
+- PostgreSQL availability
+- TLS expiry below 14 days
+- PVC usage above 85%
+- PostgreSQL backup age above 26 hours
+- uploads backup age above 26 hours
+- backup CronJobs that have never succeeded
+
+Verify loaded groups:
+
+    curl -s http://127.0.0.1:9090/api/v1/rules \
+      | jq -r '
+          .data.groups[]
+          | select(.name | startswith("swadestack."))
+          | [.name, (.rules | length)]
+          | @tsv
+        '
+
+Verify there are no active SwadeStack alerts:
+
+    curl -s http://127.0.0.1:9090/api/v1/alerts \
+      | jq -r '
+          .data.alerts[]
+          | select(.labels.alertname | startswith("SwadeStack"))
+          | [.labels.alertname, .state]
+          | @tsv
+        '
+
+No output is expected during a healthy state.
+
+### Alertmanager email routing
+
+The AlertmanagerConfig routes only alerts matching:
+
+    alertname=~"SwadeStack.*"
+
+to the SwadeStack email receiver.
+
+The standard Watchdog alert is routed to `null`.
+
+Do not print the full generated Alertmanager Secret during routine checks
+because it contains the resolved SMTP password.
+
+A safe route-only inspection is:
+
+    kubectl -n monitoring get secret \
+      alertmanager-monitoring-kube-prometheus-alertmanager-generated \
+      -o jsonpath='{.data.alertmanager\.yaml\.gz}' \
+      | base64 -d \
+      | gzip -dc \
+      | sed -n '/routes:/,/receivers:/p'
+
+For this k3s installation, kube-prometheus-stack monitoring of the standalone
+`kubeControllerManager`, `kubeScheduler`, and `kubeProxy` targets is disabled
+to avoid false `Down` alerts for components that are not exposed as expected
+by the upstream chart.
+
+### Grafana dashboard
+
+The GitOps-managed dashboard is:
+
+    SwadeStack Overview
+
+Dashboard UID:
+
+    swadestack-overview
+
+Its ConfigMap is:
+
+    swadestack-grafana-dashboard
+
+Verify:
+
+    kubectl -n monitoring get configmap \
+      swadestack-grafana-dashboard --show-labels
+
+Expected label:
+
+    grafana_dashboard=1
+
+The dashboard includes production/staging HTTP and PostgreSQL status, current
+SwadeStack alert count, HTTP latency, PostgreSQL connections, backup age, PVC
+usage, node CPU/memory/disk, backend CPU/memory, and PostgreSQL memory.
+
+---
+
+## 41. Administrative endpoints and Cloudflare Access
+
+The Kubernetes admin web endpoints are:
+
+    https://argocd.swadestack.com
+    https://grafana.swadestack.com
+
+Both are routed through Cloudflare Tunnel -> Traefik ClusterIP -> Kubernetes
+Ingress -> internal service.
+
+Cloudflare Access protects both endpoints before their native application
+authentication. Argo CD and Grafana native authentication remain enabled.
+
+Prometheus and Alertmanager are not intentionally published as public web
+applications.
+
+The Argo CD external URL is configured as:
+
+    https://argocd.swadestack.com
+
+Verify:
+
+    kubectl -n argocd get configmap argocd-cm \
+      -o jsonpath='{.data.url}{"\n"}'
+
+Note that host ports 80/443 may still be used by unrelated Docker services
+such as Nginx Proxy Manager. Kubernetes SwadeStack traffic does not depend on
+those host ports because its public path uses Cloudflare Tunnel.
+
+---
+
+## 42. CI/CD GitOps writer safety
+
+The application repository contains:
+
+    .github/workflows/build-and-deploy-staging.yaml
+    .github/workflows/promote-production.yaml
+
+Staging is triggered by a push to application `main`. Production promotion is
+manual through `workflow_dispatch`.
+
+Both workflows that modify `swadestack-k8s/main` share:
+
+    concurrency:
+      group: swadestack-gitops-writer
+      cancel-in-progress: false
+
+Both GitOps checkouts use `fetch-depth: 0`. Before pushing, the workflow fetches
+latest `origin/main`, rebases, and retries a failed non-conflicting push up to
+three times. A rebase conflict aborts the workflow instead of overwriting remote
+GitOps changes.
+
+This protects manual production rollback commits from being silently replaced
+by automation that changes the same image pins. Do not use force-push as part
+of deployment or promotion.
+
+---
+
+## 43. Production rollback procedure
+
+Production rollback is a GitOps operation. Do not use `kubectl rollout undo`
+for normal rollback and do not rewrite shared Git history with force-push.
+
+Find production history:
+
+    git log --oneline -- \
+      apps/swadestack/overlays/production/kustomization.yaml
+
+Inspect image changes:
+
+    git log -p -5 -- \
+      apps/swadestack/overlays/production/kustomization.yaml
+
+Edit:
+
+    apps/swadestack/overlays/production/kustomization.yaml
+
+Set backend and frontend to the same known-good immutable commit SHA.
+
+Validate:
+
+    kubectl kustomize apps/swadestack/overlays/production >/dev/null
+    git diff --check
+
+Commit, synchronize, and push:
+
+    git add apps/swadestack/overlays/production/kustomization.yaml
+    git commit -m "rollback production to <short-sha>"
+    git pull --rebase origin main
+    git push origin main
+
+Resolve conflicts deliberately if another GitOps writer changed the same image
+pins. Never choose ours/theirs blindly and never force-push.
+
+Refresh Argo if immediate reconciliation is desired:
+
+    kubectl -n argocd annotate application swadestack-production \
+      argocd.argoproj.io/refresh=hard --overwrite
+
+Verify Argo revision:
+
+    kubectl -n argocd get application swadestack-production \
+      -o jsonpath='{.status.sync.revision}{"\n"}'
+
+Wait for `Synced Healthy`, then verify running images and public health:
+
+    kubectl -n swadestack-production get deployment backend frontend \
+      -o jsonpath='{range .items[*]}{.metadata.name}{" => "}{.spec.template.spec.containers[0].image}{"\n"}{end}'
+
+    curl -fsS https://swadestack.com/api/health
+    echo
+
+The rollback procedure has been tested successfully using an older immutable
+SHA and then rolling forward again to the pre-test release.
+
+An image rollback does not roll back PostgreSQL data. A destructive or
+backward-incompatible migration may require a planned database restore or a
+compatible corrective migration.
+
+---
+
+## 44. Current legacy-hosting boundary
+
+The previous non-k3s SwadeStack runtime has been retired from the Lenovo
+homeserver.
+
+The old SwadeStack PM2 process, old local PostgreSQL `swadestack` database, old
+`swade_user` PostgreSQL role, old `/var/www/swadestack` source tree, and old
+SwadeStack PM2 logs were removed after the k3s production deployment was
+verified.
+
+Do not remove unrelated legacy services. The separate Nazerauto/carservice
+application remains outside k3s for now. Shared/other services such as the
+local PostgreSQL server, Nginx Proxy Manager, and unrelated Docker applications
+may still be required by other workloads.
+
+The active SwadeStack runtime is now:
+
+    GitHub application repository
+      -> GitHub Actions
+      -> GHCR
+      -> swadestack-k8s GitOps repository
+      -> Argo CD
+      -> k3s staging / production
+
+NetworkPolicies are not currently part of the SwadeStack baseline. They remain
+an optional future hardening task rather than a recovery prerequisite.
 
