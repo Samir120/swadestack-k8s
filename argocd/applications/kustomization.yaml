@@ -9,3 +9,4 @@ resources:
   - cloudflared.yaml
   - argocd-config.yaml
   - sealed-secrets.yaml
+  - monitoring.yaml
