@@ -70,7 +70,7 @@ spec:
             summary: "SwadeStack PVC usage is high"
             description: "PVC {{ $labels.persistentvolumeclaim }} in {{ $labels.namespace }} is above 85% usage."
 
-      - name: swadestack.backups
+    - name: swadestack.backups
       rules:
         - alert: SwadeStackPostgresBackupStale
           expr: |
