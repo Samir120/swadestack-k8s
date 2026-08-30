@@ -259,7 +259,7 @@ data:
           },
           "targets": [
             {
-              "expr": "pg_stat_database_numbackends{datname=\"swadestack\",namespace=~\"swadestack-(production|staging)\"}",
+              "expr": "pg_stat_database_numbackends{namespace=~\"swadestack-(production|staging)\"}",
               "legendFormat": "{{namespace}}"
             }
           ],
@@ -355,6 +355,174 @@ data:
             },
             "overrides": []
           }
+        },
+        {
+          "type": "stat",
+          "title": "Node CPU",
+          "gridPos": {
+            "h": 6,
+            "w": 8,
+            "x": 0,
+            "y": 21
+          },
+          "targets": [
+            {
+              "expr": "100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])))",
+              "legendFormat": "{{instance}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "max": 100,
+              "decimals": 1
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Node Memory",
+          "gridPos": {
+            "h": 6,
+            "w": 8,
+            "x": 8,
+            "y": 21
+          },
+          "targets": [
+            {
+              "expr": "100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))",
+              "legendFormat": "{{instance}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "max": 100,
+              "decimals": 1
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Root Disk Usage",
+          "gridPos": {
+            "h": 6,
+            "w": 8,
+            "x": 16,
+            "y": 21
+          },
+          "targets": [
+            {
+              "expr": "100 * (1 - (node_filesystem_avail_bytes{mountpoint=\"/\",fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{mountpoint=\"/\",fstype!~\"tmpfs|overlay\"}))",
+              "legendFormat": "{{instance}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "max": 100,
+              "decimals": 1
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Backend CPU",
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 27
+          },
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=~\"swadestack-(production|staging)\",container=\"backend\"}[5m]))",
+              "legendFormat": "{{namespace}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "cores"
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Backend Memory",
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 27
+          },
+          "targets": [
+            {
+              "expr": "sum by (namespace) (container_memory_working_set_bytes{namespace=~\"swadestack-(production|staging)\",container=\"backend\"})",
+              "legendFormat": "{{namespace}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes"
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "PostgreSQL Memory",
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 27
+          },
+          "targets": [
+            {
+              "expr": "sum by (namespace) (container_memory_working_set_bytes{namespace=~\"swadestack-(production|staging)\",container=\"postgres\"})",
+              "legendFormat": "{{namespace}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes"
+            },
+            "overrides": []
+          }
         }
       ],
       "refresh": "30s",
@@ -373,5 +541,5 @@ data:
       "timezone": "browser",
       "title": "SwadeStack Overview",
       "uid": "swadestack-overview",
-      "version": 1
+      "version": 2
     }
