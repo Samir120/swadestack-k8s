@@ -1,5 +1,7 @@
 apiVersion: v1
 data:
+  url: https://argocd.swadestack.com
+
   resource.customizations.health.networking.k8s.io_Ingress: |
     hs = {}
     if obj.spec ~= nil and obj.spec.rules ~= nil and #obj.spec.rules > 0 then
