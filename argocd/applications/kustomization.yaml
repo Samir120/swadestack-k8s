@@ -10,3 +10,5 @@ resources:
   - argocd-config.yaml
   - sealed-secrets.yaml
   - monitoring.yaml
+  - blackbox-exporter.yaml
+  - monitoring-config.yaml
