@@ -69,3 +69,57 @@ spec:
           annotations:
             summary: "SwadeStack PVC usage is high"
             description: "PVC {{ $labels.persistentvolumeclaim }} in {{ $labels.namespace }} is above 85% usage."
+
+      - name: swadestack.backups
+      rules:
+        - alert: SwadeStackPostgresBackupStale
+          expr: |
+            time()
+            - kube_cronjob_status_last_successful_time{
+                namespace="swadestack-production",
+                cronjob="postgres-backup"
+              }
+            > 26 * 60 * 60
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "SwadeStack PostgreSQL backup is stale"
+            description: "The last successful PostgreSQL backup is more than 26 hours old."
+
+        - alert: SwadeStackUploadsBackupStale
+          expr: |
+            time()
+            - kube_cronjob_status_last_successful_time{
+                namespace="swadestack-production",
+                cronjob="uploads-backup"
+              }
+            > 26 * 60 * 60
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "SwadeStack uploads backup is stale"
+            description: "The last successful uploads backup is more than 26 hours old."
+
+        - alert: SwadeStackBackupNeverSucceeded
+          expr: |
+            (
+              kube_cronjob_info{
+                namespace="swadestack-production",
+                cronjob=~"postgres-backup|uploads-backup"
+              }
+            )
+            unless
+            (
+              kube_cronjob_status_last_successful_time{
+                namespace="swadestack-production",
+                cronjob=~"postgres-backup|uploads-backup"
+              }
+            )
+          for: 30m
+          labels:
+            severity: critical
+          annotations:
+            summary: "SwadeStack backup has never succeeded"
+            description: "Backup CronJob {{ $labels.cronjob }} has no successful-run timestamp."
