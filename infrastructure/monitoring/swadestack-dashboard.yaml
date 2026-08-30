@@ -206,8 +206,9 @@ data:
           },
           "targets": [
             {
-              "expr": "sum(ALERTS{alertstate=\"firing\",alertname=~\"SwadeStack.*\"})",
-              "legendFormat": "Alerts"
+              "expr": "sum(ALERTS{alertstate=\"firing\",alertname=~\"SwadeStack.*\"}) or vector(0)",
+              "legendFormat": "Alerts",
+              "instant": true
             }
           ],
           "fieldConfig": {
