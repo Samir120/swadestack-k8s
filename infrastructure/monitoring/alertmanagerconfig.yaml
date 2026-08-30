@@ -6,6 +6,12 @@ metadata:
 spec:
   route:
     receiver: swadestack-email
+
+    matchers:
+      - name: alertname
+        value: "SwadeStack.*"
+        matchType: "=~"
+
     groupBy:
       - alertname
       - namespace

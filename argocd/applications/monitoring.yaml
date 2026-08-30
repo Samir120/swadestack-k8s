@@ -3,6 +3,7 @@ kind: Application
 metadata:
   name: monitoring
   namespace: argocd
+
 spec:
   project: default
 
@@ -10,6 +11,7 @@ spec:
     repoURL: https://prometheus-community.github.io/helm-charts
     chart: kube-prometheus-stack
     targetRevision: 88.6.1
+
     helm:
       releaseName: monitoring
       values: |
@@ -84,6 +86,15 @@ spec:
                     requests:
                       storage: 2Gi
 
+        kubeControllerManager:
+          enabled: false
+
+        kubeScheduler:
+          enabled: false
+
+        kubeProxy:
+          enabled: false
+
         kube-state-metrics:
           resources:
             requests:
@@ -110,6 +121,7 @@ spec:
     automated:
       prune: true
       selfHeal: true
+
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
