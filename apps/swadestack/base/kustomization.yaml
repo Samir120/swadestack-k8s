@@ -10,3 +10,4 @@ resources:
   - frontend-deployment.yaml
   - frontend-service.yaml
   - migration-job.yaml
+  - postgres-exporter.yaml
