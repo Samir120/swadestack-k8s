@@ -104,19 +104,15 @@ spec:
 
         - alert: SwadeStackBackupNeverSucceeded
           expr: |
-            (
-              kube_cronjob_info{
-                namespace="swadestack-production",
-                cronjob=~"postgres-backup|uploads-backup"
-              }
-            )
-            unless
-            (
-              kube_cronjob_status_last_successful_time{
-                namespace="swadestack-production",
-                cronjob=~"postgres-backup|uploads-backup"
-              }
-            )
+            kube_cronjob_info{
+              namespace="swadestack-production",
+              cronjob=~"postgres-backup|uploads-backup"
+            }
+            unless on(namespace, cronjob)
+            kube_cronjob_status_last_successful_time{
+              namespace="swadestack-production",
+              cronjob=~"postgres-backup|uploads-backup"
+            }
           for: 30m
           labels:
             severity: critical
