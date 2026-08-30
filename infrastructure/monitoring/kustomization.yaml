@@ -3,3 +3,4 @@ kind: Kustomization
 
 resources:
   - swadestack-probes.yaml
+  - swadestack-alerts.yaml
