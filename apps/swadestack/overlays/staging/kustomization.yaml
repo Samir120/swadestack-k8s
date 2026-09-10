@@ -12,7 +12,7 @@ resources:
 
 images:
   - name: ghcr.io/samir120/swadestack-backend
-    newTag: 6b4dcb2de93e85b9bc1fcab13711787a27d840c9
+    newTag: 8529d784b9dfb610fb304e5a5f88cde44b60c888
 
   - name: ghcr.io/samir120/swadestack-frontend
-    newTag: 6b4dcb2de93e85b9bc1fcab13711787a27d840c9
+    newTag: 8529d784b9dfb610fb304e5a5f88cde44b60c888
