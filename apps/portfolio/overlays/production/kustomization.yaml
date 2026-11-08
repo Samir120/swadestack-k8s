@@ -10,4 +10,4 @@ resources:
 
 images:
   - name: ghcr.io/samir120/portfolio
-    newTag: 1cb3aab4e4bd1aaa3b8ef31385213d805127fe00
+    newTag: 80d5962e9d59c9329e7ba3fd61078313d11f8ebe
