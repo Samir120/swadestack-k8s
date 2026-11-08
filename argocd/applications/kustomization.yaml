@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - swadestack-staging.yaml
   - swadestack-production.yaml
+  - portfolio.yaml
   - reloader.yaml
   - traefik.yaml
   - cloudflared.yaml

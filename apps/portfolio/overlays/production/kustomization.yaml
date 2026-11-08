@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: portfolio
+
+resources:
+  - ../../base
+  - namespace.yaml
+  - ingress.yaml
+
+images:
+  - name: ghcr.io/samir120/portfolio
+    newTag: 1cb3aab4e4bd1aaa3b8ef31385213d805127fe00
