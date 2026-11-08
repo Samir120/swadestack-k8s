@@ -28,6 +28,15 @@ spec:
             summary: "SwadeStack staging is down"
             description: "https://lab.swadestack.com has failed HTTP probes for more than 5 minutes."
 
+        - alert: SwadeStackPortfolioDown
+          expr: probe_success{job="portfolio"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "The portfolio is down"
+            description: "https://samir.swadestack.com has failed HTTP probes for more than 2 minutes."
+
     - name: swadestack.postgres
       rules:
         - alert: SwadeStackPostgresDown

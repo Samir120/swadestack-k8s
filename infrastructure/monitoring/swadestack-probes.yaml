@@ -39,3 +39,24 @@ spec:
     staticConfig:
       static:
         - https://lab.swadestack.com
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: portfolio
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  jobName: portfolio
+
+  interval: 30s
+  module: http_2xx
+
+  prober:
+    url: blackbox-exporter-prometheus-blackbox-exporter.monitoring.svc.cluster.local:9115
+
+  targets:
+    staticConfig:
+      static:
+        - https://samir.swadestack.com
