@@ -37,6 +37,11 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 10
 
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5
+
           resources:
             requests:
               cpu: 25m
